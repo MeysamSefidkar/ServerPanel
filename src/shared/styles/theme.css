@@ -1,0 +1,73 @@
+/*
+ * تم برنامه (Tailwind v4).
+ * هر متغیر داخل @theme خودکار یک کلاس Tailwind می‌سازد:
+ *   --color-accent  →  bg-accent / text-accent / border-accent
+ *   --color-muted   →  text-muted
+ * برای تغییر رنگ‌ها فقط همین فایل را عوض کن.
+ */
+@theme {
+    /* رنگ‌های پیش‌فرض Tailwind (red-500 و ...) حذف می‌شوند تا فقط پالت سازمانی در دسترس باشد */
+    --color-*: initial;
+
+    --color-white: #ffffff;
+    --color-black: #000000;
+
+    /* پس‌زمینه (navy) */
+    --color-bg-1: #0b1626;
+    --color-bg-2: #15263f;
+    --color-panel: rgb(10 18 34 / 0.85);
+
+    /* متن */
+    --color-text-soft: #c9d6e8;
+    --color-muted: #8fa3bf;
+
+    /* خط‌ها و حاشیه‌ها */
+    --color-line: rgb(255 255 255 / 0.11);
+    --color-line-strong: rgb(255 255 255 / 0.2);
+
+    /* آبی سازمانی و رنگ‌های کمکی */
+    --color-accent: #2b6cb0;
+    --color-accent-2: #4a90c2;
+    --color-teal: #2c7a8c;
+    --color-teal-2: #3e9aae;
+    --color-slate: #3b5b7e;
+    --color-slate-2: #56739a;
+
+    /* وضعیت‌ها — سبز فقط برای «فعال» */
+    --color-success: #2fae74;
+    --color-warning: #d69e2e;
+    --color-danger: #c0444a;
+    --color-off: #6b3439;
+
+    /* فونت پیش‌فرض (کلاس font-sans) */
+    --font-sans: 'Vazirmatn', Tahoma, sans-serif;
+
+    /* اندازه‌ها: w-sidebar */
+    --spacing-sidebar: 244px;
+}
+
+/* ---- کلاس‌های اختصاصی (مثل کلاس‌های خود Tailwind استفاده می‌شوند) ---- */
+
+/* کارت شیشه‌ای — با گرادیان، بدون blur */
+@utility glass {
+    background-image: linear-gradient(135deg, rgb(255 255 255 / 0.1), rgb(255 255 255 / 0.03));
+}
+
+@utility grad-accent {
+    background-image: linear-gradient(135deg, var(--color-accent), var(--color-accent-2));
+}
+
+@utility grad-teal {
+    background-image: linear-gradient(135deg, var(--color-teal), var(--color-teal-2));
+}
+
+@utility grad-slate {
+    background-image: linear-gradient(135deg, var(--color-slate), var(--color-slate-2));
+}
+
+/* متن انگلیسی/عدد (IP، نام کاربری) داخل صفحه راست‌چین */
+@utility dir-ltr {
+    direction: ltr;
+    unicode-bidi: isolate;
+    font-variant-numeric: tabular-nums;
+}

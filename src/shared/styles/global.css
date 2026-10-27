@@ -1,0 +1,67 @@
+@import 'tailwindcss';
+@import './theme.css';
+
+/* استایل‌های پایه — reset کامل را خود Tailwind (preflight) انجام می‌دهد */
+@layer base {
+    /*
+     * مقیاس تلویزیون و مانیتور بزرگ: چون همه‌ی اندازه‌ها rem هستند،
+     * با بزرگ کردن فونت ریشه کل رابط متناسب بزرگ می‌شود.
+     * (media query ها به rem مرورگر وابسته‌اند، پس حلقه‌ی بازخورد ندارند.)
+     */
+    html {
+        font-size: 100%; /* 16px: تبلت و لپ‌تاپ */
+    }
+
+    @media (min-width: 1920px) {
+        html {
+            font-size: 112.5%;
+        }
+
+        /* 18px: مانیتور Full HD */
+    }
+
+    @media (min-width: 2560px) {
+        html {
+            font-size: 137.5%;
+        }
+
+        /* 22px: مانیتور 2K و تلویزیون */
+    }
+
+    @media (min-width: 3840px) {
+        html {
+            font-size: 200%;
+        }
+
+        /* 32px: تلویزیون 4K */
+    }
+
+    html,
+    body,
+    #root {
+        min-height: 100%;
+    }
+
+    body {
+        @apply font-sans text-white antialiased;
+        background: radial-gradient(circle at 75% 5%, rgb(43 108 176 / 0.35), transparent 45%),
+        radial-gradient(circle at 10% 95%, rgb(47 143 157 / 0.2), transparent 45%),
+        linear-gradient(135deg, var(--color-bg-1), var(--color-bg-2));
+        background-attachment: fixed;
+    }
+
+    /* اسکرول‌بار تیره */
+    ::-webkit-scrollbar {
+        width: 10px;
+        height: 10px;
+    }
+
+    ::-webkit-scrollbar-thumb {
+        background: rgb(255 255 255 / 0.12);
+        border-radius: 10px;
+    }
+
+    ::-webkit-scrollbar-track {
+        background: transparent;
+    }
+}

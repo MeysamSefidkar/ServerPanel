@@ -22,40 +22,6 @@ export interface RackServerDetail {
     ramUsage: number;
 }
 
-/** داده‌ی نمونه، کلید = شناسه‌ی دستگاه در RackColumn. بعداً از API می‌آید. */
-export const MOCK_DETAILS: Record<number, RackServerDetail> = {
-    6: {
-        id: 6,
-        name: 'SRV-DB01',
-        status: 'active',
-        kind: 'فیزیکی',
-        cpu: '32 Core · 2 × Xeon',
-        ram: '128 GB',
-        disk: '4 TB · RAID 10',
-        os: 'Windows Server 2022',
-        group: 'مالی',
-        ip: '10.0.1.11',
-        location: 'Rack A · U10-12',
-        cpuUsage: 0.46,
-        ramUsage: 0.8,
-    },
-    12: {
-        id: 12,
-        name: 'SRV-FS02',
-        status: 'repair',
-        kind: 'فیزیکی',
-        cpu: '16 Core',
-        ram: '64 GB',
-        disk: '20 TB',
-        os: 'Windows Server 2019',
-        group: 'IT',
-        ip: '10.0.1.22',
-        location: 'Rack B · U14-15',
-        cpuUsage: 0.12,
-        ramUsage: 0.5,
-    },
-};
-
 const toFa = (n: number) => String(n).replace(/\d/g, (d) => '۰۱۲۳۴۵۶۷۸۹'[Number(d)]);
 
 const STATUS: Record<RackServerStatus, { label: string; text: string; bg: string; dot: string }> = {

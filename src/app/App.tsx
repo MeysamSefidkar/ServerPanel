@@ -3,6 +3,7 @@ import {AppLayout} from './layout/AppLayout';
 import {modules} from "./module.ts";
 import {NotFoundPage} from './NotFoundPage';
 import {useCurrentUser} from "../shared/auth/useCurrentUser.ts";
+import {ServerFormPage} from "../features/servers/ServerFormPage.tsx";
 
 /**
  * مسیرها خودکار از روی فهرست ماژول‌ها ساخته می‌شوند.
@@ -11,6 +12,7 @@ import {useCurrentUser} from "../shared/auth/useCurrentUser.ts";
 export function App() {
     const user = useCurrentUser();
     const allowed = modules.filter((m) => !m.adminOnly || user.role === 'Admin');
+    const isAdmin = user.role === 'Admin';
 
     return (
         <BrowserRouter>
@@ -23,6 +25,10 @@ export function App() {
                             <Route key={id} path={`${path}/*`} element={<Page/>}/>
                         ),
                     )}
+
+                    {isAdmin && <Route path="servers/new" element={<ServerFormPage/>}/>}
+                    {isAdmin && <Route path="servers/:id/edit" element={<ServerFormPage/>}/>}
+
                     <Route path="*" element={<NotFoundPage/>}/>
                 </Route>
             </Routes>

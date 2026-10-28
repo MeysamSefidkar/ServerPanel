@@ -1,11 +1,12 @@
 import {useState} from 'react';
+import {useNavigate} from 'react-router-dom';
 import {PageHeader} from "../../shared/ui/PageHeader.tsx";
 import {useCurrentUser} from "../../shared/auth/useCurrentUser.ts";
 import {RackColumn} from './components/RackColumn';
 import {RackMini} from './components/RackMini';
 import {RackDetailPanel} from './components/RackDetailPanel';
-import {RACK_ROWS, type RackRowKey} from './rackData';
-import {buildDetail} from './serverData';
+import {type RackRowKey} from './rackData';
+import {getDetail, useRackRows} from './serverStore';
 
 // رنگ‌ها باید با DEVICE_STYLE در RackColumn یکی باشند
 const LEGEND = [
@@ -18,24 +19,28 @@ const LEGEND = [
 const ROW_KEYS: RackRowKey[] = ['C', 'G'];
 
 /** اولین رکی که دستگاه دارد؛ اگر ردیف کاملاً خالی بود، اولین رک */
-const firstRack = (key: RackRowKey) => (RACK_ROWS[key].find((r) => r.devices.length > 0) ?? RACK_ROWS[key][0]).name;
+const firstRack = (rows: ReturnType<typeof useRackRows>, key: RackRowKey) =>
+    (rows[key].find((r) => r.devices.length > 0) ?? rows[key][0]).name;
 
-/** صفحه نمای رک: نوار انتخاب رک، رک بزرگ و جزئیات دستگاه انتخاب‌شده */
+/** صفحه نمای رک: نوار انتخاب رک، رک بزرگ و جزئیات دستگاه انتخاب‌شده. داده از serverStore می‌آید. */
 export default function RackViewPage() {
+    const navigate = useNavigate();
     const {role} = useCurrentUser();
+    const allRacks = useRackRows();
+
     const [rowKey, setRowKey] = useState<RackRowKey>('C');
-    const [rackName, setRackName] = useState(() => firstRack('C'));
+    const [rackName, setRackName] = useState(() => firstRack(allRacks, 'C'));
     const [selectedId, setSelectedId] = useState<number | null>(null);
 
-    const racks = RACK_ROWS[rowKey];
+    const racks = allRacks[rowKey];
     const rack = racks.find((r) => r.name === rackName) ?? racks[0];
 
     const device = rack.devices.find((d) => d.id === selectedId);
-    const detail = device ? buildDetail(device, rack.name) : null;
+    const detail = device ? getDetail(device, rack.name) : null;
 
     const changeRow = (key: RackRowKey) => {
         setRowKey(key);
-        setRackName(firstRack(key));
+        setRackName(firstRack(allRacks, key));
         setSelectedId(null);
     };
 
@@ -64,7 +69,7 @@ export default function RackViewPage() {
             <div role="tablist" aria-label="ردیف رک" className="mb-4 flex gap-2">
                 {ROW_KEYS.map((key) => {
                     const active = key === rowKey;
-                    const count = RACK_ROWS[key].reduce((sum, r) => sum + r.devices.length, 0);
+                    const count = allRacks[key].reduce((sum, r) => sum + r.devices.length, 0);
                     return (
                         <button
                             key={key}
@@ -100,7 +105,11 @@ export default function RackViewPage() {
                 </div>
 
                 <div className="w-full xl:sticky xl:top-4 xl:w-72 xl:shrink-0">
-                    <RackDetailPanel server={detail} canEdit={role === 'Admin'}/>
+                    <RackDetailPanel
+                        server={detail}
+                        canEdit={role === 'Admin'}
+                        onEdit={(id) => navigate(`/servers/${id}/edit`)}
+                    />
                 </div>
             </div>
         </>

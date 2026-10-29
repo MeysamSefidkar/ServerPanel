@@ -16,6 +16,7 @@ import {
     type YesNo,
 } from '../serverForm';
 import type {ServerStatus} from './ServerTable';
+import {LookupSelect} from '../../lookups';
 
 const KIND_OPTIONS: { value: ServerKind; label: string }[] = [
     {value: 'physical', label: 'فیزیکی'},
@@ -139,6 +140,7 @@ export function ServerForm({initial, ctx, submitLabel, serverError, onSubmit, on
     const hasFieldErrors = Object.values(errors).some(Boolean);
     const banner = serverError ?? (hasFieldErrors ? 'لطفاً خطاهای فرم را برطرف کنید.' : '');
     const isPhysical = values.kind === 'physical';
+    const isEditing = ctx.editingId !== undefined;
 
     return (
         <form onSubmit={handleSubmit} noValidate className="space-y-5">
@@ -149,15 +151,22 @@ export function ServerForm({initial, ctx, submitLabel, serverError, onSubmit, on
             )}
 
             <Section title="هویت و شبکه">
-                <Field label="نوع سرور" wide>
+                <Field
+                    label="نوع سرور"
+                    wide
+                    hint={isEditing ? 'نوع سرور بعد از ثبت قابل تغییر نیست.' : undefined}
+                >
                     <div className="inline-flex w-fit rounded-xl border border-line p-1">
                         {KIND_OPTIONS.map((o) => (
                             <button
                                 key={o.value}
                                 type="button"
+                                disabled={isEditing}
                                 onClick={() => set('kind', o.value)}
-                                className={`rounded-lg px-4 py-1.5 text-sm transition ${
-                                    values.kind === o.value ? 'grad-accent text-white' : 'text-muted hover:text-text-soft'
+                                className={`rounded-lg px-4 py-1.5 text-sm transition disabled:cursor-not-allowed ${
+                                    values.kind === o.value
+                                        ? 'grad-accent text-white'
+                                        : 'text-muted hover:text-text-soft disabled:opacity-40 disabled:hover:text-muted'
                                 }`}
                             >
                                 {o.label}
@@ -220,10 +229,11 @@ export function ServerForm({initial, ctx, submitLabel, serverError, onSubmit, on
                 </Field>
 
                 <Field label="گروه" error={errors.group}>
-                    <input
+                    <LookupSelect
+                        kind="group"
                         className={field(errors.group)}
                         value={values.group}
-                        onChange={(e) => set('group', e.target.value)}
+                        onChange={(v) => set('group', v)}
                     />
                 </Field>
 
@@ -258,10 +268,11 @@ export function ServerForm({initial, ctx, submitLabel, serverError, onSubmit, on
                 </Field>
 
                 <Field label="پیمانکار">
-                    <input
+                    <LookupSelect
+                        kind="contractor"
                         className={field()}
                         value={values.contractor}
-                        onChange={(e) => set('contractor', e.target.value)}
+                        onChange={(v) => set('contractor', v)}
                     />
                 </Field>
 
@@ -377,8 +388,11 @@ export function ServerForm({initial, ctx, submitLabel, serverError, onSubmit, on
                         </Field>
 
                         <Field label="Host">
-                            <input className={field()} value={values.host}
-                                   onChange={(e) => set('host', e.target.value)}/>
+                            <input
+                                className={field()}
+                                value={values.host}
+                                onChange={(e) => set('host', e.target.value)}
+                            />
                         </Field>
                     </>
                 )}
@@ -404,7 +418,12 @@ export function ServerForm({initial, ctx, submitLabel, serverError, onSubmit, on
                 </Field>
 
                 <Field label="سیستم‌عامل" error={errors.os}>
-                    <input className={field(errors.os)} value={values.os} onChange={(e) => set('os', e.target.value)}/>
+                    <LookupSelect
+                        kind="os"
+                        className={field(errors.os)}
+                        value={values.os}
+                        onChange={(v) => set('os', v)}
+                    />
                 </Field>
 
                 <Field label="دیسک‌ها (مدل و تعداد)" error={errors.disks} wide>
@@ -473,7 +492,12 @@ export function ServerForm({initial, ctx, submitLabel, serverError, onSubmit, on
                 </Field>
 
                 <Field label="ناحیه (Zone)">
-                    <input className={field()} value={values.zone} onChange={(e) => set('zone', e.target.value)}/>
+                    <LookupSelect
+                        kind="zone"
+                        className={field()}
+                        value={values.zone}
+                        onChange={(v) => set('zone', v)}
+                    />
                 </Field>
 
                 <Field label="اتصال به اینترنت" hint="سرور به اینترنت دسترسی دارد (خروجی).">

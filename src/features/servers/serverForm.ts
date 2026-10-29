@@ -265,6 +265,7 @@ export function validateServerForm(v: ServerFormValues, ctx: ServerFormContext):
 }
 
 export const hasErrors = (e: ServerFormErrors) => Object.keys(e).length > 0;
+
 const serverExtras = (v: ServerFormValues) => ({
     ip: ipList(v).join(', '),
     group: clean(v.group),
@@ -281,8 +282,9 @@ function bladeSlot(v: ServerFormValues): BladeSlot | undefined {
     return chassis && bay ? {chassis, bay} : undefined;
 }
 
-/** فیلدهای تکمیلی فرم، برای نگهداری در serverStore */
+/** فیلدهای تکمیلی فرم، برای نگهداری در serverStore. فیلدهای مخصوص هر نوع سرور در نوع دیگر پاک می‌شوند. */
 function toMeta(v: ServerFormValues): ServerMeta {
+    const physical = v.kind === 'physical';
     return {
         vlan: clean(v.vlan),
         level1: clean(v.level1),
@@ -291,11 +293,12 @@ function toMeta(v: ServerFormValues): ServerMeta {
         contractor: clean(v.contractor),
         supervisor: clean(v.supervisor),
         bcp: v.bcp,
-        chassis: clean(v.chassis),
-        bay: clean(v.bay),
-        model: clean(v.model),
-        cluster: clean(v.cluster),
-        host: clean(v.host),
+        chassis: physical ? clean(v.chassis) : '',
+        bay: physical ? clean(v.bay) : '',
+        model: physical ? clean(v.model) : '',
+        cluster: physical ? '' : clean(v.cluster),
+        host: physical ? '' : clean(v.host),
+        os: clean(v.os),
         zone: clean(v.zone),
         installDate: clean(v.installDate),
         internetOut: v.internetOut,
@@ -304,6 +307,7 @@ function toMeta(v: ServerFormValues): ServerMeta {
         note: v.note.trim(),
     };
 }
+
 
 /** فرم سرور فیزیکی را به ورودی serverStore.addPhysical / updatePhysical تبدیل می‌کند. قبلش validate کنید. */
 export function toPhysicalInput(v: ServerFormValues): PhysicalInput {
@@ -332,7 +336,7 @@ export function toVirtualInput(v: ServerFormValues, ramUsage = 0): VirtualInput 
         ram: clean(v.ram),
         ramUsage,
         disk: diskText(v),
-        location: [clean(v.cluster), clean(v.host)].filter(Boolean).join(' · '),
+        location: clean(v.host) ? `Host: ${clean(v.host)}` : clean(v.cluster),
         status: v.status,
         meta: toMeta(v),
     };
@@ -360,7 +364,7 @@ export function formFromServer(
         cpu: detail?.cpu ?? row.cpu,
         ram: detail?.ram ?? row.ram,
         disks: parseDisks(detail?.disk ?? row.disk),
-        os: detail?.os ?? '',
+        os: detail?.os ?? meta?.os ?? '',
         ...(meta
             ? {
                 vlan: meta.vlan,
@@ -385,14 +389,14 @@ export function formFromServer(
 
     if (row.type === 'virtual') {
         if (meta) return {...base, cluster: meta.cluster, host: meta.host};
-        const [cluster = '', host = ''] = row.location.split(' · ');
-        return {...base, cluster, host};
+        const host = row.location.match(/^Host:\s*(.+)$/)?.[1]?.trim();
+        return host ? {...base, host} : {...base, cluster: row.location};
     }
 
-    const loc = row.location.match(/Rack ([CG]\d{1,2})\s*·\s*U(\d+)\s*-\s*(\d+)/);
+    const loc = row.location.match(/Rack ([CG]\d{1,2})\s*·\s*U(\d+)(?:\s*-\s*(\d+))?/);
     if (!loc) return base;
 
     const from = Number(loc[2]);
-    const to = Number(loc[3]);
-    return {...base, rack: loc[1], startUnit: String(from), unitCount: String(to - from + 1)}
+    const to = loc[3] ? Number(loc[3]) : from;
+    return {...base, rack: loc[1], startUnit: String(from), unitCount: String(to - from + 1)};
 }

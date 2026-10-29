@@ -1,6 +1,6 @@
 import {lazy} from 'react';
 import {LayoutGrid, Server} from 'lucide-react';
-import type {AppModule} from "../../shared/types/module.ts";
+import type {AppModule} from "../../shared/types/module";
 
 /** معرفی ماژول سرورها به برنامه */
 export const serversModule: AppModule = {

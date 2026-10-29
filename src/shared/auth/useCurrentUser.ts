@@ -17,6 +17,13 @@ const mockUser: CurrentUser = {
     role: 'Admin',
 };
 
-export function useCurrentUser(): CurrentUser {
+/** کاربر فعلی بدون هوک، برای استفاده در store و کدهای غیر کامپوننت */
+export function getCurrentUser(): CurrentUser {
     return mockUser;
 }
+
+export function useCurrentUser(): CurrentUser {
+    return getCurrentUser();
+}
+
+

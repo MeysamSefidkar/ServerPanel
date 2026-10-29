@@ -1,9 +1,9 @@
-import {BrowserRouter, Route, Routes} from 'react-router-dom';
+import {BrowserRouter, Route, Routes, Navigate} from 'react-router-dom';
 import {AppLayout} from './layout/AppLayout';
-import {modules} from "./module.ts";
+import {modules} from "./modules";
 import {NotFoundPage} from './NotFoundPage';
-import {useCurrentUser} from "../shared/auth/useCurrentUser.ts";
-import {ServerFormPage} from "../features/servers/ServerFormPage.tsx";
+import {useCurrentUser} from "../shared/auth/useCurrentUser";
+import {ServerFormPage} from "../features/servers/ServerFormPage";
 
 /**
  * مسیرها خودکار از روی فهرست ماژول‌ها ساخته می‌شوند.
@@ -28,6 +28,8 @@ export function App() {
 
                     {isAdmin && <Route path="servers/new" element={<ServerFormPage/>}/>}
                     {isAdmin && <Route path="servers/:id/edit" element={<ServerFormPage/>}/>}
+                    {!isAdmin && <Route path="servers/new" element={<Navigate to="/servers" replace/>}/>}
+                    {!isAdmin && <Route path="servers/:id/edit" element={<Navigate to="/servers" replace/>}/>}
 
                     <Route path="*" element={<NotFoundPage/>}/>
                 </Route>

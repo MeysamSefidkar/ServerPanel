@@ -1,7 +1,8 @@
-import {useState} from 'react';
+import {useState, useEffect} from 'react';
 import {Link, useNavigate, useParams} from 'react-router-dom';
 import {ArrowRight} from 'lucide-react';
 import {ServerForm} from './components/ServerForm';
+import {syncLookupsFromServers} from '../lookups/lookupUsage';
 import {
     EMPTY_SERVER_FORM,
     formFromServer,
@@ -35,6 +36,10 @@ export function ServerFormPage() {
     const servers = useServers();
     const rackRows = useRackRows();
     const [serverError, setServerError] = useState('');
+
+    useEffect(() => {
+        syncLookupsFromServers();
+    }, []);
 
     const row = isEdit ? (servers.find((s) => s.id === editingId) ?? null) : null;
 

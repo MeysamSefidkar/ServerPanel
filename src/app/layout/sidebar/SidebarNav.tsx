@@ -1,6 +1,6 @@
 import {NavLink} from 'react-router-dom';
 import clsx from 'clsx';
-import {modules} from "../../module.ts";
+import {modules} from "../../modules.ts";
 import {useCurrentUser} from "../../../shared/auth/useCurrentUser.ts";
 
 /** منوی اصلی؛ خودکار از روی فهرست ماژول‌ها ساخته می‌شود */

@@ -1,5 +1,5 @@
 import {useState} from 'react';
-import {Cloud, HardDrive, MoreHorizontal, type LucideIcon} from 'lucide-react';
+import {Cloud, HardDrive, Pencil, type LucideIcon} from 'lucide-react';
 
 export type ServerType = 'physical' | 'virtual';
 export type ServerStatus = 'active' | 'repair' | 'off';
@@ -44,10 +44,12 @@ interface ServerTableProps {
     rows: ServerRow[];
     /** تعداد کل (برای متن پایین جدول) */
     total: number;
+    /** اگر داده شود، دکمه‌ی ویرایش برای هر سطر نمایش داده می‌شود (فقط Admin) */
+    onEdit?: (id: number) => void;
 }
 
 /** جدول لیست سرورها با انتخاب سطر */
-export function ServerTable({rows, total}: ServerTableProps) {
+export function ServerTable({rows, total, onEdit}: ServerTableProps) {
     const [selectedId, setSelectedId] = useState<number | null>(null);
 
     return (
@@ -138,15 +140,23 @@ export function ServerTable({rows, total}: ServerTableProps) {
                                 {status.label}
                             </span>
 
-                            {/* منو */}
-                            <button
-                                type="button"
-                                aria-label="عملیات"
-                                onClick={(e) => e.stopPropagation()}
-                                className="grid size-8 place-items-center rounded-xl bg-white/5 text-text-soft hover:bg-white/10"
-                            >
-                                <MoreHorizontal size={16}/>
-                            </button>
+                            {/* ویرایش (فقط Admin) */}
+                            {onEdit ? (
+                                <button
+                                    type="button"
+                                    aria-label={`ویرایش ${row.name}`}
+                                    title="ویرایش"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        onEdit(row.id);
+                                    }}
+                                    className="grid size-8 place-items-center rounded-xl bg-white/5 text-text-soft hover:bg-white/10 hover:text-white"
+                                >
+                                    <Pencil size={15}/>
+                                </button>
+                            ) : (
+                                <span/>
+                            )}
                         </div>
                     );
                 })}

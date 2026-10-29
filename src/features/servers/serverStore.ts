@@ -3,7 +3,9 @@ import type {RackData, RackDevice, RackDeviceState} from './components/RackColum
 import type {RackServerDetail} from './components/RackDetailPanel';
 import type {ServerRow} from './components/ServerTable';
 import {RACK_ROWS, type RackRowKey} from './rackData';
-import {buildDetail, SERVERS} from './serverData';
+import {buildDetail, VIRTUAL_SERVERS} from './serverData';
+import {diffFields, logChange, type AuditAction} from '../audit/auditStore';
+
 
 /**
  * مخزن موقت داده در حافظه. لیست سرورها، نمای رک و فرم همه از اینجا می‌خوانند و می‌نویسند.
@@ -30,6 +32,7 @@ export type ServerMeta = {
     model: string;
     cluster: string;
     host: string;
+    os: string;
     zone: string;
     installDate: string;
     internetOut: string;
@@ -118,7 +121,8 @@ const make = (
     servers: [...physicalRows(racks, extras), ...virtuals],
 });
 
-let state: State = make(RACK_ROWS, SERVERS.filter((s) => s.type === 'virtual'), {}, {});
+let state: State = make(RACK_ROWS, VIRTUAL_SERVERS, {}, {});
+
 const listeners = new Set<() => void>();
 
 function commit(patch: Partial<Omit<State, 'servers'>>) {
@@ -127,13 +131,17 @@ function commit(patch: Partial<Omit<State, 'servers'>>) {
     listeners.forEach((l) => l());
 }
 
+let lastId = 0;
+
 function nextId() {
-    let max = 0;
+    let max = lastId;
     for (const key of Object.keys(state.racks) as RackRowKey[])
         for (const r of state.racks[key]) for (const d of r.devices) max = Math.max(max, d.id);
     for (const v of state.virtuals) max = Math.max(max, v.id);
-    return max + 1;
+    lastId = max + 1;
+    return lastId;
 }
+
 
 function findRack(racks: Racks, rackName: string) {
     return racks[rackName[0] as RackRowKey]?.find((r) => r.name === rackName) ?? null;
@@ -203,12 +211,22 @@ function placeDevice(racks: Racks, meta: MetaMap, input: PhysicalInput, id: numb
         from: input.from,
         to,
         state: input.state,
+        chassis: input.meta?.chassis.trim() || undefined,
+        bay: input.meta?.bay.trim() || undefined,
     };
+
     return updateDevices(racks, input.rackName, (ds) => [...ds, device]);
 }
 
-const withExtras = (id: number, x?: ServerExtras) => (x ? {...state.extras, [id]: x} : state.extras);
-const withMeta = (id: number, m?: ServerMeta): MetaMap => (m ? {...state.meta, [id]: m} : state.meta);
+const withExtras = (id: number, x?: ServerExtras) => {
+    const {[id]: _old, ...rest} = state.extras;
+    return x ? {...rest, [id]: x} : rest;
+};
+const withMeta = (id: number, m?: ServerMeta): MetaMap => {
+    const {[id]: _old, ...rest} = state.meta;
+    return m ? {...rest, [id]: m} : rest;
+};
+
 
 // ───────── خواندن ─────────
 
@@ -233,6 +251,36 @@ export const getDetail = (device: RackDevice, rackName: string) => detailOf(devi
 /** فیلدهای تکمیلی ثبت‌شده با فرم. برای سرور قدیمی که هنوز با فرم ثبت نشده null است. */
 export const getMeta = (id: number): ServerMeta | null => state.meta[id] ?? null;
 
+/** همه‌ی مقدارهای ثبت‌شده‌ی یک فیلد، برای شمارش استفاده در صفحه‌ی Lookups */
+export const getFieldValues = (kind: 'group' | 'zone' | 'os' | 'contractor'): string[] => {
+    let out: (string | undefined)[];
+    switch (kind) {
+        case 'group':
+            out = state.servers.map((s) => s.group);
+            break;
+        case 'zone':
+            out = Object.values(state.meta).map((m) => m.zone);
+            break;
+        case 'contractor':
+            out = Object.values(state.meta).map((m) => m.contractor);
+            break;
+        case 'os':
+            out = [
+                // سرور فیزیکی: OS از extras (یا نمونه‌ی داخلی)
+                ...(Object.keys(state.racks) as RackRowKey[]).flatMap((key) =>
+                    state.racks[key].flatMap((rack) =>
+                        rack.devices.map((d) => detailOf(d, rack.name, state.extras)?.os),
+                    ),
+                ),
+                // سرور مجازی: OS در meta ذخیره می‌شود
+                ...state.virtuals.map((v) => state.meta[v.id]?.os),
+            ];
+            break;
+    }
+    return out.filter((v): v is string => !!v && v.trim() !== '');
+};
+
+
 /**
  * برای فرم و RackUnitPicker: آیا این بازه‌ی یونیت خالی است؟
  * اگر slot (شاسی و Bay) بدهید، Blade دیگری از همان شاسی با Bay متفاوت مانع نمی‌شود.
@@ -256,7 +304,115 @@ export const isBayTaken = (chassis: string, bay: string, ignoreId?: number) =>
             m.chassis.trim() !== '',
     );
 
-// ───────── نوشتن ─────────
+// ───────── گزارش تغییرات ─────────
+
+type Flat = Record<string, string>;
+
+const ROW_LABELS: Record<string, string> = {
+    name: 'نام سرور',
+    ip: 'IP',
+    group: 'گروه',
+    cpu: 'CPU',
+    ram: 'RAM',
+    disk: 'دیسک',
+    location: 'محل',
+    status: 'وضعیت',
+};
+
+const META_LABELS: Record<keyof ServerMeta, string> = {
+    vlan: 'VLAN',
+    level1: 'سطح ۱',
+    level2: 'سطح ۲',
+    systemName: 'نام سیستم',
+    contractor: 'پیمانکار',
+    supervisor: 'ناظر',
+    bcp: 'BCP',
+    chassis: 'شاسی',
+    bay: 'Bay',
+    model: 'مدل',
+    cluster: 'کلاستر',
+    host: 'هاست',
+    os: 'سیستم‌عامل',
+    zone: 'Zone',
+    installDate: 'تاریخ نصب',
+    internetOut: 'اینترنت خروجی',
+    internetIn: 'اینترنت ورودی',
+    services: 'سرویس‌ها',
+    note: 'یادداشت',
+};
+
+const LABELS: Record<string, string> = {...ROW_LABELS, ...META_LABELS};
+
+function flatOf(row: Record<string, string>, meta: ServerMeta | null): Flat {
+    return {...row, ...(meta ?? {})};
+}
+
+/** وضعیت فعلی سرور، برای مقایسه قبل از تغییر */
+function snapshotOf(id: number): Flat {
+    const s = getServer(id);
+    if (!s) return {};
+    return flatOf(
+        {
+            name: s.name,
+            ip: s.ip,
+            group: s.group,
+            cpu: s.cpu,
+            ram: s.ram,
+            disk: s.disk,
+            location: s.location,
+            status: s.status,
+        },
+        state.meta[id] ?? null,
+    );
+}
+
+/** مقدار فرم سرور فیزیکی، به همان شکل snapshotOf */
+function afterPhysical(input: PhysicalInput): Flat {
+    const to = input.from + input.size - 1;
+    const unit = to > input.from ? `U${input.from}-${to}` : `U${input.from}`;
+    return flatOf(
+        {
+            name: input.name.trim(),
+            ip: input.extras?.ip ?? '',
+            group: input.extras?.group ?? '',
+            cpu: input.extras?.cpu ?? '',
+            ram: input.extras?.ram ?? '',
+            disk: (input.extras?.disk ?? '').split(' · ')[0],
+            location: `Rack ${input.rackName} · ${unit}`,
+            status: input.state,
+        },
+        input.meta ?? null,
+    );
+}
+
+/** مقدار فرم سرور مجازی، به همان شکل snapshotOf */
+function afterVirtual(input: VirtualInput): Flat {
+    return flatOf(
+        {
+            name: input.name.trim(),
+            ip: input.ip,
+            group: input.group,
+            cpu: input.cpu,
+            ram: input.ram,
+            disk: input.disk,
+            location: input.location,
+            status: input.status,
+        },
+        input.meta ?? null,
+    );
+}
+
+function recordCreate(id: number, name: string, after: Flat) {
+    logChange({action: 'create', serverId: id, serverName: name, changes: diffFields({}, after, LABELS)});
+}
+
+function recordUpdate(id: number, name: string, before: Flat, after: Flat) {
+    const changes = diffFields(before, after, LABELS);
+    if (changes.length === 0) return; // ذخیره بدون تغییر لاگ نمی‌شود
+    logChange({action: 'update' as AuditAction, serverId: id, serverName: name, changes});
+}
+
+// ───────── تغییرات ─────────
 
 export function addPhysical(input: PhysicalInput): number {
     const id = nextId();
@@ -265,30 +421,48 @@ export function addPhysical(input: PhysicalInput): number {
         extras: withExtras(id, input.extras),
         meta: withMeta(id, input.meta),
     });
+    recordCreate(id, input.name.trim(), afterPhysical(input));
     return id;
 }
 
+/** اگر سرور قبلاً مجازی بوده، از لیست مجازی بیرون می‌رود و در رک قرار می‌گیرد */
 export function updatePhysical(id: number, input: PhysicalInput) {
+    const before = snapshotOf(id);
     const racks = placeDevice(removeDevice(state.racks, id), state.meta, input, id);
-    commit({racks, extras: withExtras(id, input.extras), meta: withMeta(id, input.meta)});
+    commit({
+        racks,
+        virtuals: state.virtuals.filter((v) => v.id !== id),
+        extras: withExtras(id, input.extras),
+        meta: withMeta(id, input.meta),
+    });
+    recordUpdate(id, input.name.trim(), before, afterPhysical(input));
 }
 
 export function addVirtual(input: VirtualInput): number {
     const id = nextId();
     const {meta, ...row} = input;
     commit({virtuals: [...state.virtuals, {...row, id, type: 'virtual'}], meta: withMeta(id, meta)});
+    recordCreate(id, input.name.trim(), afterVirtual(input));
     return id;
 }
 
+/** اگر سرور قبلاً فیزیکی بوده، از رک بیرون می‌رود و به لیست مجازی اضافه می‌شود */
 export function updateVirtual(id: number, input: VirtualInput) {
+    const before = snapshotOf(id);
     const {meta, ...row} = input;
+    const next: ServerRow = {...row, id, type: 'virtual'};
+    const exists = state.virtuals.some((v) => v.id === id);
     commit({
-        virtuals: state.virtuals.map((v) => (v.id === id ? {...row, id, type: 'virtual'} : v)),
+        racks: removeDevice(state.racks, id),
+        virtuals: exists ? state.virtuals.map((v) => (v.id === id ? next : v)) : [...state.virtuals, next],
+        extras: withExtras(id, undefined),
         meta: withMeta(id, meta),
     });
+    recordUpdate(id, input.name.trim(), before, afterVirtual(input));
 }
 
 export function removeServer(id: number) {
+    const name = getServer(id)?.name ?? '';
     const {[id]: _x, ...extras} = state.extras;
     const {[id]: _m, ...meta} = state.meta;
     commit({
@@ -297,4 +471,5 @@ export function removeServer(id: number) {
         extras,
         meta,
     });
+    logChange({action: 'delete', serverId: id, serverName: name, changes: []});
 }

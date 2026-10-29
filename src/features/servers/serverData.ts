@@ -1,11 +1,11 @@
 import type {RackDevice} from './components/RackColumn';
 import type {RackServerDetail} from './components/RackDetailPanel';
 import type {ServerRow} from './components/ServerTable';
-import {RACK_ROWS, type RackRowKey} from './rackData';
 
 /**
- * منبع داده‌ی مشترک لیست سرورها و نمای رک.
- * سرورهای فیزیکی از دستگاه‌های rackData ساخته می‌شوند؛ پس هر دو صفحه یک چیز نشان می‌دهند.
+ * داده‌ی نمونه و سازنده‌ی جزئیات سرور.
+ * لیست نهایی سرورها (فیزیکی + مجازی) در serverStore ساخته می‌شود؛
+ * این فایل فقط سرورهای مجازی اولیه و buildDetail را می‌دهد.
  * بعداً همه از API می‌آید.
  */
 
@@ -47,38 +47,8 @@ export function buildDetail(device: RackDevice, rackName: string): RackServerDet
     };
 }
 
-/** یک سطر جدول از روی دستگاه رک؛ مقادیرش با پنل جزئیات یکی است */
-function toRow(device: RackDevice, rackName: string): ServerRow | null {
-    const detail = buildDetail(device, rackName);
-    if (!detail) return null;
-    return {
-        id: detail.id,
-        name: detail.name,
-        ip: detail.ip,
-        type: 'physical',
-        group: detail.group,
-        cpu: detail.cpu,
-        ram: detail.ram,
-        ramUsage: detail.ramUsage,
-        disk: specOf(device).disk, // در جدول کوتاه، بدون RAID
-        location: detail.location,
-        status: detail.status,
-    };
-}
-
-const ROW_KEYS = Object.keys(RACK_ROWS) as RackRowKey[];
-
-const RACK_SERVERS: ServerRow[] = ROW_KEYS.flatMap((key) =>
-    RACK_ROWS[key].flatMap((rack) =>
-        rack.devices.flatMap((device) => {
-            const row = toRow(device, rack.name);
-            return row ? [row] : [];
-        }),
-    ),
-);
-
 /** سرورهای مجازی جایی در رک ندارند. نمونه‌اند. شناسه از ۱۰۰۱ شروع می‌شود تا با دستگاه‌های رک تداخل نکند. */
-const VIRTUAL_SERVERS: ServerRow[] = [
+export const VIRTUAL_SERVERS: ServerRow[] = [
     {
         id: 1001,
         name: 'SRV-APP12',
@@ -90,7 +60,7 @@ const VIRTUAL_SERVERS: ServerRow[] = [
         ramUsage: 0.25,
         disk: '200 GB',
         location: 'Host: HV-03',
-        status: 'active'
+        status: 'active',
     },
     {
         id: 1002,
@@ -103,7 +73,7 @@ const VIRTUAL_SERVERS: ServerRow[] = [
         ramUsage: 0.12,
         disk: '100 GB',
         location: 'Host: HV-01',
-        status: 'active'
+        status: 'active',
     },
     {
         id: 1003,
@@ -116,7 +86,7 @@ const VIRTUAL_SERVERS: ServerRow[] = [
         ramUsage: 0.3,
         disk: '120 GB',
         location: 'Host: HV-02',
-        status: 'active'
+        status: 'active',
     },
     {
         id: 1004,
@@ -129,9 +99,6 @@ const VIRTUAL_SERVERS: ServerRow[] = [
         ramUsage: 0.6,
         disk: '500 GB',
         location: 'Host: HV-02',
-        status: 'repair'
+        status: 'repair',
     },
 ];
-
-/** همه‌ی سرورها: فیزیکی (از رک‌ها) + مجازی */
-export const SERVERS: ServerRow[] = [...RACK_SERVERS, ...VIRTUAL_SERVERS];

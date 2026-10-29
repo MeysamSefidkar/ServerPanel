@@ -1,8 +1,8 @@
 import {useMemo, useState} from 'react';
 import {useNavigate} from 'react-router-dom';
 import {Download, Plus} from 'lucide-react';
-import {PageHeader} from "../../shared/ui/PageHeader.tsx";
-import {useCurrentUser} from "../../shared/auth/useCurrentUser.ts";
+import {PageHeader} from "../../shared/ui/PageHeader";
+import {useCurrentUser} from "../../shared/auth/useCurrentUser";
 import {ServerTable, type ServerRow} from './components/ServerTable';
 import {ServerToolbar, type ServerCounts, type ServerFilter} from './components/ServerToolbar';
 import {useServers} from './serverStore';
@@ -105,7 +105,11 @@ export default function ServersPage() {
 
             {/* جدول در تبلت داخل خودش اسکرول می‌شود و کل صفحه تکان نمی‌خورد */}
             <div className="mt-6 min-w-0 overflow-x-auto rounded-3xl">
-                <ServerTable rows={rows} total={counts.all}/>
+                <ServerTable
+                    rows={rows}
+                    total={counts.all}
+                    onEdit={isAdmin ? (id) => navigate(`/servers/${id}/edit`) : undefined}
+                />
             </div>
         </>
     );

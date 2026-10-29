@@ -5,7 +5,7 @@ import {useCurrentUser} from "../../shared/auth/useCurrentUser.ts";
 import {RackColumn} from './components/RackColumn';
 import {RackMini} from './components/RackMini';
 import {RackDetailPanel} from './components/RackDetailPanel';
-import {type RackRowKey} from './rackData';
+import type {RackRowKey} from './rackData';
 import {getDetail, useRackRows} from './serverStore';
 
 // رنگ‌ها باید با DEVICE_STYLE در RackColumn یکی باشند
